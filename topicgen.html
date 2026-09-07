@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#151612">
+<title>Topic Machine</title>
+<style>
+:root{
+  --bg:#151612;--panel:#1d1f1a;--panel2:#252820;--line:#3a3d32;
+  --text:#f4f1e8;--muted:#9e9b8d;--accent:#6f8f61;--accent2:#9e754d;
+  --danger:#a65d50;--shadow:0 18px 50px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{min-height:100svh;overflow-x:hidden}
+button,input{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid #b9cba8;outline-offset:3px}
+.app{min-height:100svh;display:grid;place-items:center;padding:max(24px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
+.machine{width:min(720px,100%);display:flex;flex-direction:column;align-items:center;gap:clamp(20px,4vh,34px)}
+.brand{font-size:clamp(12px,2vw,14px);font-weight:800;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
+.slot-wrap{width:100%;padding:0 4px}
+.slot{
+  position:relative;height:clamp(190px,38vw,280px);min-height:190px;
+  border:1px solid #45483b;border-radius:26px;background:#10110e;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.035),inset 0 -18px 35px rgba(0,0,0,.4),var(--shadow);
+  overflow:hidden;display:grid;place-items:center;
+}
+.slot:before,.slot:after{content:"";position:absolute;left:0;right:0;height:30%;z-index:2;pointer-events:none}
+.slot:before{top:0;background:linear-gradient(#10110e,transparent)}
+.slot:after{bottom:0;background:linear-gradient(transparent,#10110e)}
+.window{position:absolute;inset:18% 0;display:grid;place-items:center;border-top:1px solid #303329;border-bottom:1px solid #303329;background:rgba(255,255,255,.018)}
+.reel{width:100%;height:100%;display:grid;place-items:center;text-align:center;padding:24px 9%;will-change:transform,filter}
+.topic{font-size:clamp(25px,6vw,52px);line-height:1.05;font-weight:850;letter-spacing:-.035em;overflow-wrap:anywhere}
+.reel.spinning .topic{filter:blur(1.8px);opacity:.76}
+.reel.winner{animation:winner .65s cubic-bezier(.2,.9,.25,1)}
+@keyframes winner{0%{transform:scale(.94);filter:blur(3px);opacity:.5}55%{transform:scale(1.035);filter:blur(0);opacity:1}100%{transform:scale(1)}}
+.status{min-height:74px;text-align:center;display:grid;justify-items:center;align-content:center;gap:5px}
+.phase{font-size:12px;font-weight:850;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+.timer{font-variant-numeric:tabular-nums;font-size:clamp(34px,8vw,54px);font-weight:800;letter-spacing:-.04em}
+.timer[hidden]{display:none}
+.controls{width:min(600px,100%);display:grid;grid-template-columns:1fr 54px;gap:10px}
+.btn{border:1px solid var(--line);border-radius:16px;min-height:56px;color:var(--text);background:var(--panel);font-weight:850;letter-spacing:.12em;text-transform:uppercase;box-shadow:0 7px 18px rgba(0,0,0,.2);transition:transform .12s,background .15s,opacity .15s}
+.btn:active{transform:translateY(2px) scale(.985)}
+.btn:hover:not(:disabled){background:var(--panel2)}
+.btn.primary{background:linear-gradient(180deg,#77986a,#58744e);border-color:#8ba77e;color:#11150f;box-shadow:0 9px 24px rgba(72,96,59,.25)}
+.btn.stop{background:#30211e;border-color:#68453d;color:#e7c9c0}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.gear{font-size:21px;letter-spacing:0;text-transform:none}
+.count{font-size:12px;color:var(--muted);min-height:17px}
+.count[hidden]{display:none}
+
+.manage{position:fixed;inset:0;background:rgba(13,14,11,.96);backdrop-filter:blur(10px);z-index:20;display:none}
+.manage.open{display:block}
+.manage-inner{width:min(760px,100%);height:100%;margin:auto;padding:max(18px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));display:flex;flex-direction:column}
+.manage-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.manage-title{font-size:22px;font-weight:850}
+.icon{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;width:48px;height:48px;font-size:21px}
+.add-row{display:grid;grid-template-columns:1fr auto;gap:9px;margin-bottom:20px}
+.input{width:100%;min-height:54px;border:1px solid var(--line);border-radius:15px;background:#181914;color:var(--text);padding:0 16px}
+.input::placeholder{color:#737268}
+.add-btn{min-width:78px}
+.list-head{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px;margin-bottom:9px}
+.list{flex:1;overflow:auto;border-top:1px solid var(--line);padding-bottom:10px}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #2c2e27}
+.row input{min-height:48px}
+.row-text{overflow-wrap:anywhere;line-height:1.3;padding:7px 2px}
+.row-actions{display:flex;gap:7px}
+.small{width:44px;height:44px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px}
+.small.delete{color:#d7a89f}
+.empty{color:var(--muted);text-align:center;padding:44px 15px;line-height:1.6}
+.footer-actions{display:flex;gap:9px;padding-top:14px}
+.footer-actions .btn{flex:1;min-height:48px;font-size:12px}
+.file{display:none}
+@media(max-width:430px){
+  .app{padding-left:14px;padding-right:14px}
+  .machine{gap:18px}
+  .slot{border-radius:22px}
+  .controls{grid-template-columns:1fr 52px}
+  .add-row{grid-template-columns:1fr}
+  .add-btn{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+  .reel.winner{animation:none}
+  .btn{transition:none}
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <section class="machine" aria-label="Topic Machine">
+    <div class="brand">Topic Machine</div>
+
+    <div class="slot-wrap">
+      <div class="slot" aria-live="polite" aria-atomic="true">
+        <div class="window">
+          <div class="reel" id="reel">
+            <div class="topic" id="topic">Add some topics</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status" id="status" hidden>
+      <div class="phase" id="phase"></div>
+      <div class="timer" id="timer" aria-live="off">02:00</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" id="randomise">Randomise</button>
+      <button class="btn gear" id="manageBtn" aria-label="Manage topics" title="Manage topics">⚙</button>
+    </div>
+  </section>
+</main>
+
+<section class="manage" id="manage" aria-label="Manage topics" aria-hidden="true">
+  <div class="manage-inner">
+    <header class="manage-head">
+      <div class="manage-title">Topics</div>
+      <button class="icon" id="closeManage" aria-label="Close topics">✕</button>
+    </header>
+
+    <form class="add-row" id="addForm">
+      <input class="input" id="topicInput" autocomplete="off" placeholder="Add a new topic…" aria-label="New topic">
+      <button class="btn primary add-btn" type="submit">Add</button>
+    </form>
+
+    <div class="list-head">
+      <span id="topicCount">0 topics</span>
+    </div>
+    <div class="list" id="topicList"></div>
+
+    <div class="footer-actions">
+      <button class="btn" id="importBtn" type="button">Import JSON</button>
+      <button class="btn" id="exportBtn" type="button">Export JSON</button>
+      <button class="btn" id="clearBtn" type="button">Clear</button>
+    </div>
+    <input class="file" id="fileInput" type="file" accept=".json,application/json">
+  </div>
+</section>
+
+<script>
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "topic-machine-topics-v1";
+  let topics = [];
+  let shuffleBag = [];
+  let lastWinner = null;
+
+  let timerInterval = null;
+  let phaseTimeout = null;
+  let sessionToken = 0;
+  let spinning = false;
+  let audioCtx = null;
+  let wakeLock = null;
+
+  const $ = id => document.getElementById(id);
+  const reel = $("reel");
+  const topicEl = $("topic");
+  const status = $("status");
+  const phaseEl = $("phase");
+  const timerEl = $("timer");
+  const randomiseBtn = $("randomise");
+  const manage = $("manage");
+  const topicInput = $("topicInput");
+  const topicList = $("topicList");
+  const topicCount = $("topicCount");
+
+  function loadTopics() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      topics = normaliseTopics(parsed);
+    } catch {
+      topics = [];
+    }
+    resetShuffleBag();
+    renderTopics();
+    renderMain();
+  }
+
+  function saveTopics() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(topics));
+  }
+
+  function normaliseTopics(data) {
+    const arr = Array.isArray(data) ? data : (data && Array.isArray(data.topics) ? data.topics : null);
+    if (!arr) throw new Error("Invalid topic JSON");
+    const seen = new Set();
+    return arr.map(v => String(v ?? "").trim())
+      .filter(v => v && !seen.has(v.toLocaleLowerCase()) && (seen.add(v.toLocaleLowerCase()), true));
+  }
+
+  function renderTopics() {
+    topicCount.textContent = `${topics.length} topic${topics.length === 1 ? "" : "s"}`;
+    topicList.innerHTML = "";
+    if (!topics.length) {
+      topicList.innerHTML = `<div class="empty">No topics yet.<br>Add something above to get started.</div>`;
+      return;
+    }
+    topics.forEach((text, index) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.dataset.index = index;
+      row.innerHTML = `
+        <div class="row-text">${escapeHTML(text)}</div>
+        <div class="row-actions">
+          <button class="small edit" aria-label="Edit topic">✎</button>
+          <button class="small delete" aria-label="Delete topic">🗑</button>
+        </div>`;
+      topicList.appendChild(row);
+    });
+  }
+
+  function renderMain() {
+    if (!topics.length) {
+      topicEl.textContent = "Add some topics";
+      status.hidden = true;
+    } else if (!spinning && !status.hidden) {
+      // keep current state
+    }
+    randomiseBtn.disabled = !topics.length || spinning;
+  }
+
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  function resetShuffleBag() {
+    shuffleBag = shuffle([...topics]);
+    if (shuffleBag.length > 1 && lastWinner !== null && shuffleBag[0] === lastWinner) {
+      const swap = 1 + Math.floor(Math.random() * (shuffleBag.length - 1));
+      [shuffleBag[0], shuffleBag[swap]] = [shuffleBag[swap], shuffleBag[0]];
+    }
+  }
+
+  function pickTopic() {
+    if (!shuffleBag.length) resetShuffleBag();
+    if (!shuffleBag.length) return null;
+
+    const winner = shuffleBag.shift();
+
+    if (!shuffleBag.length && topics.length > 1) {
+      // Refill only after this result has been consumed. The next bag's
+      // first item is prevented from matching the current winner.
+      shuffleBag = shuffle([...topics]);
+      if (shuffleBag[0] === winner) {
+        [shuffleBag[0], shuffleBag[1]] = [shuffleBag[1], shuffleBag[0]];
+      }
+    }
+    lastWinner = winner;
+    return winner;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function clearTimer() {
+    if (timerInterval !== null) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    if (phaseTimeout !== null) {
+      clearTimeout(phaseTimeout);
+      phaseTimeout = null;
+    }
+    sessionToken++;
+    releaseWakeLock();
+  }
+
+  function resetTimerDisplay() {
+    clearTimer();
+    status.hidden = true;
+    phaseEl.textContent = "";
+    timerEl.textContent = "02:00";
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = Math.max(0, seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  async function requestWakeLock() {
+    if (!("wakeLock" in navigator)) return;
+    try {
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { wakeLock = null; }, { once: true });
+    } catch {}
+  }
+
+  async function releaseWakeLock() {
+    if (wakeLock) {
+      try { await wakeLock.release(); } catch {}
+      wakeLock = null;
+    }
+  }
+
+  function startCountdown(seconds, label, token, onDone) {
+    if (token !== sessionToken) return;
+    let remaining = seconds;
+    phaseEl.textContent = label;
+    timerEl.textContent = formatTime(remaining);
+    status.hidden = false;
+    requestWakeLock();
+
+    timerInterval = setInterval(() => {
+      if (token !== sessionToken) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        return;
+      }
+      remaining -= 1;
+      timerEl.textContent = formatTime(remaining);
+      if (remaining <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        onDone();
+      }
+    }, 1000);
+  }
+
+  function startPracticeTimer(token) {
+    if (token !== sessionToken) return;
+    startCountdown(120, "Preparation", token, () => {
+      if (token !== sessionToken) return;
+      beep("transition");
+      startCountdown(300, "Speaking", token, () => {
+        if (token !== sessionToken) return;
+        phaseEl.textContent = "Finished";
+        timerEl.textContent = "00:00";
+        status.hidden = false;
+        buzz(3);
+        releaseWakeLock();
+      });
+    });
+  }
+
+  function stopTimer() {
+    if (!status.hidden) {
+      clearTimer();
+      phaseEl.textContent = "Stopped";
+      // Preserve the visible remaining time.
+      status.hidden = false;
+      buzz(2);
+    }
+  }
+
+  function randomise() {
+    if (!topics.length || spinning) return;
+
+    clearTimer();
+    sessionToken++;
+    const token = sessionToken;
+    spinning = true;
+    randomiseBtn.disabled = true;
+    status.hidden = true;
+    reel.classList.remove("winner");
+    reel.classList.add("spinning");
+    startAudio();
+
+    const winner = pickTopic();
+    if (winner === null) return;
+
+    spin(winner, token);
+  }
+
+  function spin(winner, token) {
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = reduced ? 3000 : 4800;
+    const start = performance.now();
+    let nextTick = start;
+    let lastShown = topicEl.textContent;
+    let count = 0;
+
+    // Aggressive early movement, then progressively longer intervals.
+    const tick = now => {
+      if (token !== sessionToken) return;
+      const elapsed = now - start;
+      const p = Math.min(1, elapsed / duration);
+
+      if (now >= nextTick && p < .94) {
+        let candidate = topics[Math.floor(Math.random() * topics.length)];
+        if (topics.length > 1 && candidate === lastShown) {
+          candidate = topics[(topics.indexOf(candidate) + 1) % topics.length];
+        }
+        lastShown = candidate;
+        topicEl.textContent = candidate;
+        count++;
+        beep("tick", Math.max(.1, 1 - p));
+        buzz(1);
+
+        // Exponential-ish deceleration: rapid at first, deliberate at end.
+        const interval = 34 + Math.pow(p, 2.65) * 360;
+        nextTick = now + interval;
+      }
+
+      if (p < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        finishSpin(winner, token);
+      }
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function finishSpin(winner, token) {
+    if (token !== sessionToken) return;
+    topicEl.textContent = winner;
+    reel.classList.remove("spinning");
+    void reel.offsetWidth;
+    reel.classList.add("winner");
+    spinning = false;
+    randomiseBtn.disabled = false;
+    beep("land");
+    buzz(4);
+    startPracticeTimer(token);
+  }
+
+  function startAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch {}
+  }
+
+  function beep(type, intensity = 1) {
+    if (!audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const now = audioCtx.currentTime;
+      const freq = type === "land" ? 165 : type === "transition" ? 110 : 320;
+      osc.type = type === "land" ? "triangle" : "square";
+      osc.frequency.setValueAtTime(freq, now);
+      if (type === "land") osc.frequency.exponentialRampToValueAtTime(82, now + .12);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(type === "land" ? .075 : .018 * intensity, now + .008);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + (type === "land" ? .15 : .035));
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + (type === "land" ? .16 : .04));
+    } catch {}
+  }
+
+  function buzz(pattern) {
+    if (!navigator.vibrate) return;
+    if (pattern === 1) navigator.vibrate(6);
+    else if (pattern === 2) navigator.vibrate(18);
+    else if (pattern === 3) navigator.vibrate([20,40,20]);
+    else navigator.vibrate([18,30,45,30,70]);
+  }
+
+  function openManage() {
+    manage.classList.add("open");
+    manage.setAttribute("aria-hidden", "false");
+    renderTopics();
+    setTimeout(() => topicInput.focus(), 30);
+  }
+
+  function closeManage() {
+    manage.classList.remove("open");
+    manage.setAttribute("aria-hidden", "true");
+  }
+
+  function addTopic() {
+    const value = topicInput.value.trim();
+    if (!value) return;
+    const exists = topics.some(t => t.toLocaleLowerCase() === value.toLocaleLowerCase());
+    if (!exists) {
+      topics.push(value);
+      saveTopics();
+      resetShuffleBag();
+      renderTopics();
+      renderMain();
+    }
+    topicInput.value = "";
+    topicInput.focus();
+  }
+
+  function editTopic(index, row) {
+    const old = topics[index];
+    const input = document.createElement("input");
+    input.className = "input";
+    input.value = old;
+    input.setAttribute("aria-label", "Edit topic");
+    row.querySelector(".row-text").replaceWith(input);
+    input.focus();
+    input.select();
+
+    const finish = save => {
+      if (!row.isConnected) return;
+      if (save) {
+        const value = input.value.trim();
+        const duplicate = topics.some((t,i) => i !== index && t.toLocaleLowerCase() === value.toLocaleLowerCase());
+        if (value && !duplicate) topics[index] = value;
+      }
+      saveTopics();
+      resetShuffleBag();
+      renderTopics();
+      renderMain();
+    };
+
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); finish(true); }
+      if (e.key === "Escape") { e.preventDefault(); finish(false); }
+    });
+    input.addEventListener("blur", () => finish(true), { once: true });
+  }
+
+  function deleteTopic(index) {
+    if (!confirm(`Delete "${topics[index]}"?`)) return;
+    topics.splice(index, 1);
+    saveTopics();
+    resetShuffleBag();
+    renderTopics();
+    renderMain();
+  }
+
+  function clearTopics() {
+    if (!topics.length) return;
+    if (!confirm("Clear all topics?")) return;
+    topics = [];
+    shuffleBag = [];
+    lastWinner = null;
+    saveTopics();
+    renderTopics();
+    renderMain();
+  }
+
+  function exportJSON() {
+    const blob = new Blob([JSON.stringify({ topics }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "topics.json";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+  }
+
+  function importJSON() {
+    $("fileInput").click();
+  }
+
+  async function handleImport(file) {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const imported = normaliseTopics(parsed);
+      if (!confirm(`Replace your current topics with ${imported.length} imported topic${imported.length === 1 ? "" : "s"}?`)) return;
+      clearTimer();
+      spinning = false;
+      topics = imported;
+      shuffleBag = [];
+      lastWinner = null;
+      saveTopics();
+      resetShuffleBag();
+      renderTopics();
+      renderMain();
+    } catch {
+      alert("That JSON file is not valid. Use {\"topics\":[...]} or a plain JSON array.");
+    } finally {
+      $("fileInput").value = "";
+    }
+  }
+
+  $("addForm").addEventListener("submit", e => { e.preventDefault(); addTopic(); });
+  $("manageBtn").addEventListener("click", openManage);
+  $("closeManage").addEventListener("click", closeManage);
+  $("randomise").addEventListener("click", randomise);
+  $("importBtn").addEventListener("click", importJSON);
+  $("exportBtn").addEventListener("click", exportJSON);
+  $("clearBtn").addEventListener("click", clearTopics);
+  $("fileInput").addEventListener("change", e => handleImport(e.target.files[0]));
+
+  topicList.addEventListener("click", e => {
+    const row = e.target.closest(".row");
+    if (!row) return;
+    const index = Number(row.dataset.index);
+    if (e.target.closest(".edit")) editTopic(index, row);
+    if (e.target.closest(".delete")) deleteTopic(index);
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && manage.classList.contains("open")) closeManage();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    // If the page becomes visible again during an active session, reacquire
+    // screen wake lock where possible.
+    if (!document.hidden && !status.hidden && phaseEl.textContent !== "Finished" && phaseEl.textContent !== "Stopped") {
+      requestWakeLock();
+    }
+  });
+
+  loadTopics();
+})();
+</script>
+</body>
+</html>
