@@ -9,7 +9,7 @@
 :root{
   --bg:#151612;--panel:#1d1f1a;--panel2:#252820;--line:#3a3d32;
   --text:#f4f1e8;--muted:#9e9b8d;--accent:#6f8f61;--accent2:#9e754d;
-  --danger:#f79696;--shadow:0 18px 50px rgba(0,0,0,.35);
+  --danger:#e62323;--shadow:0 18px 50px rgba(0,0,0,.35);
   --slot-bg:#10110e;--slot-border:#383b2f;--slot-window-border:#2c2f25;
   --slot-window-bg:rgba(255,255,255,.018);--input-bg:#181914;
   --manage-bg:rgba(13,14,11,.96);--row-border:#2c2e27;
@@ -17,7 +17,7 @@
 [data-theme="light"]{
   --bg:#f5f4ef;--panel:#ffffff;--panel2:#ece9e0;--line:#d6d2c4;
   --text:#191b15;--muted:#6e6b5e;--accent:#4a743b;--accent2:#8b5b30;
-  --danger:#f79696;--shadow:0 14px 40px rgba(0,0,0,.07);
+  --danger:#e62323;--shadow:0 14px 40px rgba(0,0,0,.07);
   --slot-bg:#ffffff;--slot-border:#d4cfbe;--slot-window-border:#dedad0;
   --slot-window-bg:rgba(0,0,0,.02);--input-bg:#f9f8f5;
   --manage-bg:rgba(245,244,239,.97);--row-border:#e6e3d8;
@@ -368,7 +368,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .small:hover:not(:disabled){background:var(--panel2)}
 .small:active{transform:scale(.94)}
 .small.delete{
-  background:#f79696 !important;
+  background:#e62323 !important;
   border-color:#b91c1c !important;
   color:#ffffff !important;
   box-shadow:0 2px 8px rgba(220,38,38,.35);
@@ -783,16 +783,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       const now = audioCtx.currentTime;
-      const freq = type === "land" ? 165 : type === "transition" ? 110 : 320;
-      osc.type = type === "land" ? "triangle" : "square";
+
+      // 2800Hz–3200Hz is the human ear's most sensitive frequency range
+      const freq = type === "land" ? 3200 : 2800;
+      osc.type = "sawtooth"; // Biting, sharp waveform rich in harmonics
       osc.frequency.setValueAtTime(freq, now);
-      if (type === "land") osc.frequency.exponentialRampToValueAtTime(82, now + .12);
+
+      // Instant attack to 0.5 volume (significantly louder than 0.018)
       gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(type === "land" ? .075 : .018 * intensity, now + .008);
-      gain.gain.exponentialRampToValueAtTime(.0001, now + (type === "land" ? .15 : .035));
+      gain.gain.linearRampToValueAtTime(0.5, now + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
       osc.connect(gain).connect(audioCtx.destination);
       osc.start(now);
-      osc.stop(now + (type === "land" ? .16 : .04));
+      osc.stop(now + 0.13);
     } catch {}
   }
 
