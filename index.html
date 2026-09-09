@@ -238,14 +238,18 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   position:relative;
   width:46px;
   height:24px;
-  background:var(--text);
-  border:1px solid var(--line);
+  background:#3a3d32; /* dark gray track — dark mode (default) */
+  border:1px solid #2c2f25;
   border-radius:12px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   padding:0 5px;
   transition:background .2s,border-color .2s;
+}
+[data-theme="light"] .switch-track{
+  background:var(--text); /* keep current light-mode rendering untouched */
+  border-color:var(--line);
 }
 .switch-thumb{
   position:absolute;
@@ -254,9 +258,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   width:18px;
   height:18px;
   border-radius:50%;
-  background:var(--panel2);
+  background:#ece9e0; /* same thumb colour as light mode — white look in dark mode */
   transition:transform .22s cubic-bezier(.4,0,.2,1);
   box-shadow:0 2px 5px rgba(0,0,0,.25);
+}
+[data-theme="light"] .switch-thumb{
+  background:var(--panel2); /* keep current light-mode rendering untouched */
 }
 /* Changed '+' to '~' so it matches .switch-track across the intermediate label element */
 .theme-switch input:checked ~ .switch-track .switch-thumb{
