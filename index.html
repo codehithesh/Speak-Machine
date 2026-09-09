@@ -238,7 +238,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   position:relative;
   width:46px;
   height:24px;
-  background:var(--panel2);
+  background:var(--text);
   border:1px solid var(--line);
   border-radius:12px;
   display:flex;
@@ -254,7 +254,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   width:18px;
   height:18px;
   border-radius:50%;
-  background:var(--text);
+  background:var(--panel2);
   transition:transform .22s cubic-bezier(.4,0,.2,1);
   box-shadow:0 2px 5px rgba(0,0,0,.25);
 }
@@ -377,6 +377,33 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   background:#b91c1c !important;
   border-color:#991b1b !important;
 }
+.small.start{
+  background:linear-gradient(180deg,#77986a,#58744e);
+  border-color:#8ba77e;
+  color:#11150f;
+  width:auto;
+  min-width:72px;
+  padding:0 15px;
+  font-size:12px;
+  font-weight:850;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  box-shadow:0 2px 8px rgba(72,96,59,.3);
+}
+.small.start:hover:not(:disabled){
+  background:linear-gradient(180deg,#8aab7c,#65885a);
+  border-color:#96b288;
+}
+.small.start:disabled{opacity:.4;cursor:not-allowed}
+[data-theme="light"] .small.start{
+  background:linear-gradient(180deg,#628954,#486d3b);
+  border-color:#557c48;
+  color:#ffffff;
+}
+[data-theme="light"] .small.start:hover:not(:disabled){
+  background:linear-gradient(180deg,#6d9a58,#547f43);
+  border-color:#63944f;
+}
 .empty{color:var(--muted);text-align:center;padding:44px 15px;line-height:1.6}
 .footer-actions{display:flex;gap:9px;padding-top:14px}
 .footer-actions .btn{flex:1;min-height:48px;font-size:12px}
@@ -427,7 +454,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 <aside class="theme-switch-container" aria-label="Theme toggle">
   <label class="theme-switch" for="themeToggle" title="Toggle light/dark mode">
     <input type="checkbox" id="themeToggle" role="switch" aria-label="Toggle light and dark mode">
-    <span class="switch-label" id="themeLabel">Dark</span>
+    <span class="switch-label" id="themeLabel">Light mode</span>
     <span class="switch-track" aria-hidden="true">
       <span class="switch-thumb"></span>
     </span>
@@ -489,7 +516,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   const topicList = $("topicList");
   const topicCount = $("topicCount");
   const themeToggle = $("themeToggle");
-  const themeLabel = $("themeLabel");
 
   function applyTheme(theme) {
     const isLight = theme === "light";
@@ -499,7 +525,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
       document.documentElement.removeAttribute("data-theme");
     }
     if (themeToggle) themeToggle.checked = isLight;
-    if (themeLabel) themeLabel.textContent = isLight ? "Light" : "Dark";
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) metaTheme.setAttribute("content", isLight ? "#f5f4ef" : "#151612");
     try {
@@ -565,6 +590,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
       row.innerHTML = `
         <div class="row-text">${escapeHTML(text)}</div>
         <div class="row-actions">
+          <button class="small start" aria-label="Start ${escapeHTML(text)} now" title="Start this topic now">Start</button>
           <button class="small edit" aria-label="Edit topic">✎</button>
           <button class="small delete" aria-label="Delete topic">🗑</button>
         </div>`;
@@ -874,6 +900,36 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
     renderMain();
   }
 
+  // Start a chosen topic immediately, skipping the randomiser/spin.
+  function startTopicDirect(index) {
+    const text = topics[index];
+    if (!text) return;
+
+    // Abort any running timer or mid-flight spin and start fresh
+    clearTimer();
+    sessionToken++;
+    const token = sessionToken;
+    spinning = false;
+    randomiseBtn.disabled = false;
+
+    // Show the chosen topic right away with a quick "winner" pop (no reel spin)
+    reel.classList.remove("spinning", "winner");
+    topicEl.textContent = text;
+    void reel.offsetWidth;
+    reel.classList.add("winner");
+
+    // Treat it as "just picked" so the next main-screen Start can't immediately land on it again
+    lastWinner = text;
+    const bagIndex = shuffleBag.indexOf(text);
+    if (bagIndex !== -1) shuffleBag.splice(bagIndex, 1);
+
+    closeManage();
+    startAudio();
+    beep("land");
+    buzz(4);
+    startPracticeTimer(token);
+  }
+
   function clearTopics() {
     if (!topics.length) return;
     if (!confirm("Clear all topics?")) return;
@@ -935,6 +991,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
     const row = e.target.closest(".row");
     if (!row) return;
     const index = Number(row.dataset.index);
+    if (e.target.closest(".start")) startTopicDirect(index);
     if (e.target.closest(".edit")) editTopic(index, row);
     if (e.target.closest(".delete")) deleteTopic(index);
   });
